@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico de Vulnerabilidades - Clínicas Veterinarias | NexusVet.AI</title>
+    <meta name="description" content="Herramienta de autodiagnóstico para identificar vulnerabilidades y oportunidades de mejora en clínicas veterinarias">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'vet': {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                            950: '#052e16'
+                        }
+                    },
+                    fontFamily: {
+                        'display': ['Fraunces', 'serif'],
+                        'body': ['DM Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * { font-family: 'DM Sans', sans-serif; }
+        h1, h2, h3, .font-display { font-family: 'Fraunces', serif; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        
+        .progress-fill { transition: width 0.5s ease-out; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px rgba(22, 163, 74, 0.2); }
+        
+        .likert-option { transition: all 0.2s ease; }
+        .likert-option:hover { transform: scale(1.05); }
+        .likert-option.selected { transform: scale(1.1); }
+        
+        .bg-gradient-vet { background: linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%); }
+        
+        .semaphore { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .semaphore-green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .semaphore-yellow { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .semaphore-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        
+        .section-tab { transition: all 0.3s ease; }
+        .section-tab.active { background: linear-gradient(135deg, #166534, #16a34a); color: white; }
+        .section-tab.completed { border-color: #22c55e; background: #f0fdf4; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="root"></div>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        
+        // ===================== FORMSPREE CONFIG =====================
+        // YA CONFIGURADO CON SU ID
+        const FORMSPREE_ID = "mvgokkby";
+        
+        const sendToFormspree = (data) => {
+            fetch("https://formspree.io/f/" + FORMSPREE_ID, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify(data)
+            }).then(r => console.log(r.ok ? "✅ Enviado" : "❌ Error"))
+              .catch(e => console.log("Error:", e));
+        };
+        
+        // ===================== DATA =====================
+        const ROLES = [
+            { id: 'owner', label: 'Propietario/Director', icon: '👔' },
+            { id: 'vet', label: 'Médico Veterinario', icon: '🩺' },
+            { id: 'assistant', label: 'Asistente Veterinario', icon: '💉' },
+            { id: 'receptionist', label: 'Recepcionista', icon: '📞' },
+            { id: 'admin', label: 'Administrador', icon: '📊' },
+            { id: 'other', label: 'Otro', icon: '👤' }
+        ];
+        
+        const SURVEY_SECTIONS = [
+            {
+                id: 'strategy', title: 'Estrategia y Visión', icon: '🎯',
+                description: 'Evalúa la claridad de objetivos y dirección estratégica',
+                color: 'from-blue-500 to-blue-600',
+                questions: [
+                    { id: 'str1', type: 'likert', text: '¿La clínica tiene una misión y visión claramente definidas?' },
+                    { id: 'str2', type: 'likert', text: '¿Existen objetivos anuales medibles y alcanzables?' },
+                    { id: 'str3', type: 'likert', text: '¿Se realizan análisis periódicos del mercado y competencia?' },
+                    { id: 'str4', type: 'likert', text: '¿El equipo conoce y comparte los objetivos estratégicos?' },
+                    { id: 'str5', type: 'open', text: '¿Cuál considera que es el principal desafío estratégico?' }
+                ]
+            },
+            {
+                id: 'clients', title: 'Experiencia del Cliente', icon: '🐾',
+                description: 'Analiza la calidad de atención y satisfacción del cliente',
+                color: 'from-pink-500 to-rose-500',
+                questions: [
+                    { id: 'cli1', type: 'likert', text: '¿Se mide regularmente la satisfacción del cliente?' },
+                    { id: 'cli2', type: 'likert', text: '¿Existe un protocolo claro de atención al cliente?' },
+                    { id: 'cli3', type: 'likert', text: '¿Se hace seguimiento post-consulta a los pacientes?' },
+                    { id: 'cli4', type: 'likert', text: '¿Los tiempos de espera son aceptables?' },
+                    { id: 'cli5', type: 'likert', text: '¿Se gestionan adecuadamente las quejas?' },
+                    { id: 'cli6', type: 'open', text: '¿Qué mejoras implementaría para fidelizar clientes?' }
+                ]
+            },
+            {
+                id: 'processes', title: 'Procesos Operativos', icon: '⚙️',
+                description: 'Evalúa la eficiencia de los procesos internos',
+                color: 'from-amber-500 to-orange-500',
+                questions: [
+                    { id: 'pro1', type: 'likert', text: '¿Los procesos clínicos están documentados?' },
+                    { id: 'pro2', type: 'likert', text: '¿Se optimiza el flujo de trabajo?' },
+                    { id: 'pro3', type: 'likert', text: '¿Existe un sistema efectivo de gestión de citas?' },
+                    { id: 'pro4', type: 'likert', text: '¿Los procesos administrativos son eficientes?' },
+                    { id: 'pro5', type: 'open', text: '¿Qué proceso consume más tiempo innecesario?' }
+                ]
+            },
+            {
+                id: 'biosecurity', title: 'Bioseguridad', icon: '🛡️',
+                description: 'Analiza protocolos de seguridad y prevención',
+                color: 'from-red-500 to-red-600',
+                questions: [
+                    { id: 'bio1', type: 'likert', text: '¿Existen protocolos de bioseguridad actualizados?' },
+                    { id: 'bio2', type: 'likert', text: '¿El personal está capacitado en bioseguridad?' },
+                    { id: 'bio3', type: 'likert', text: '¿Se realiza correcta gestión de residuos?' },
+                    { id: 'bio4', type: 'likert', text: '¿Los equipos de protección están disponibles?' },
+                    { id: 'bio5', type: 'likert', text: '¿Se llevan registros de incidentes?' },
+                    { id: 'bio6', type: 'open', text: '¿Qué área de bioseguridad requiere atención?' }
+                ]
+            },
+            {
+                id: 'hr', title: 'Recursos Humanos', icon: '👥',
+                description: 'Evalúa la gestión del talento y clima laboral',
+                color: 'from-purple-500 to-violet-500',
+                questions: [
+                    { id: 'hr1', type: 'likert', text: '¿Existe un programa de capacitación continua?' },
+                    { id: 'hr2', type: 'likert', text: '¿El equipo se siente valorado y motivado?' },
+                    { id: 'hr3', type: 'likert', text: '¿Los salarios son competitivos?' },
+                    { id: 'hr4', type: 'likert', text: '¿Existe baja rotación de personal?' },
+                    { id: 'hr5', type: 'likert', text: '¿Se realizan evaluaciones de desempeño?' },
+                    { id: 'hr6', type: 'open', text: '¿Cuál es el principal desafío con su equipo?' }
+                ]
+            },
+            {
+                id: 'technology', title: 'Tecnología e Innovación', icon: '💻',
+                description: 'Analiza el nivel de digitalización',
+                color: 'from-cyan-500 to-teal-500',
+                questions: [
+                    { id: 'tec1', type: 'likert', text: '¿Se utiliza software de gestión veterinaria?' },
+                    { id: 'tec2', type: 'likert', text: '¿Los historiales clínicos están digitalizados?' },
+                    { id: 'tec3', type: 'likert', text: '¿Se ofrecen servicios de telemedicina?' },
+                    { id: 'tec4', type: 'likert', text: '¿Se usan herramientas digitales con clientes?' },
+                    { id: 'tec5', type: 'likert', text: '¿El equipamiento médico está actualizado?' },
+                    { id: 'tec6', type: 'open', text: '¿Qué tecnología le gustaría implementar?' }
+                ]
+            },
+            {
+                id: 'finance', title: 'Gestión Financiera', icon: '💰',
+                description: 'Evalúa la salud financiera',
+                color: 'from-green-500 to-emerald-500',
+                questions: [
+                    { id: 'fin1', type: 'likert', text: '¿Se lleva control detallado de ingresos y gastos?' },
+                    { id: 'fin2', type: 'likert', text: '¿La rentabilidad es satisfactoria?' },
+                    { id: 'fin3', type: 'likert', text: '¿Existe un presupuesto anual planificado?' },
+                    { id: 'fin4', type: 'likert', text: '¿Se analizan indicadores financieros?' },
+                    { id: 'fin5', type: 'likert', text: '¿El flujo de caja es estable?' },
+                    { id: 'fin6', type: 'open', text: '¿Cuál es su mayor preocupación financiera?' }
+                ]
+            },
+            {
+                id: 'marketing', title: 'Marketing y Comunicación', icon: '📣',
+                description: 'Analiza presencia de marca y captación',
+                color: 'from-indigo-500 to-blue-500',
+                questions: [
+                    { id: 'mkt1', type: 'likert', text: '¿Tiene presencia activa en redes sociales?' },
+                    { id: 'mkt2', type: 'likert', text: '¿Existe un plan de marketing definido?' },
+                    { id: 'mkt3', type: 'likert', text: '¿Se mide el retorno de las acciones de marketing?' },
+                    { id: 'mkt4', type: 'likert', text: '¿La marca es reconocida en la zona?' },
+                    { id: 'mkt5', type: 'open', text: '¿Qué canal de marketing le ha dado mejores resultados?' }
+                ]
+            },
+            {
+                id: 'quality', title: 'Calidad y Mejora Continua', icon: '✨',
+                description: 'Evalúa los sistemas de calidad',
+                color: 'from-yellow-500 to-amber-500',
+                questions: [
+                    { id: 'qua1', type: 'likert', text: '¿Existen indicadores de calidad definidos?' },
+                    { id: 'qua2', type: 'likert', text: '¿Se realizan auditorías internas?' },
+                    { id: 'qua3', type: 'likert', text: '¿Se implementan acciones de mejora basadas en datos?' },
+                    { id: 'qua4', type: 'likert', text: '¿El personal participa en iniciativas de mejora?' },
+                    { id: 'qua5', type: 'open', text: '¿Qué área necesita mejora urgente?' }
+                ]
+            },
+            {
+                id: 'compliance', title: 'Cumplimiento Legal', icon: '📋',
+                description: 'Analiza el cumplimiento normativo',
+                color: 'from-slate-500 to-gray-600',
+                questions: [
+                    { id: 'leg1', type: 'likert', text: '¿Cumple con todas las normativas sanitarias?' },
+                    { id: 'leg2', type: 'likert', text: '¿Las licencias y permisos están actualizados?' },
+                    { id: 'leg3', type: 'likert', text: '¿Se protegen adecuadamente los datos de clientes?' },
+                    { id: 'leg4', type: 'likert', text: '¿Los contratos laborales están en regla?' },
+                    { id: 'leg5', type: 'likert', text: '¿Se cuenta con asesoría legal cuando es necesario?' },
+                    { id: 'leg6', type: 'open', text: '¿Qué aspecto legal le genera más incertidumbre?' }
+                ]
+            }
+        ];
+        
+        const LIKERT_OPTIONS = [
+            { value: 1, label: 'Muy en desacuerdo', color: 'bg-red-500', emoji: '😟' },
+            { value: 2, label: 'En desacuerdo', color: 'bg-orange-500', emoji: '😕' },
+            { value: 3, label: 'Neutral', color: 'bg-yellow-500', emoji: '😐' },
+            { value: 4, label: 'De acuerdo', color: 'bg-lime-500', emoji: '🙂' },
+            { value: 5, label: 'Muy de acuerdo', color: 'bg-green-500', emoji: '😊' }
+        ];
+        
+        // ===================== ANALYSIS =====================
+        const analyzeResponses = (responses) => {
+            const insights = [];
+            const sectionScores = {};
+            
+            SURVEY_SECTIONS.forEach(section => {
+                const sectionResponses = section.questions
+                    .filter(q => q.type === 'likert')
+                    .map(q => responses[q.id])
+                    .filter(r => r !== undefined);
+                
+                if (sectionResponses.length > 0) {
+                    const avg = sectionResponses.reduce((a, b) => a + b, 0) / sectionResponses.length;
+                    const lowScores = sectionResponses.filter(r => r <= 2).length;
+                    
+                    sectionScores[section.id] = {
+                        average: avg,
+                        lowScores,
+                        total: sectionResponses.length,
+                        status: avg >= 4 ? 'good' : avg >= 3 ? 'warning' : 'danger'
+                    };
+                }
+            });
+            
+            if (sectionScores.hr && sectionScores.hr.lowScores >= 3) {
+                insights.push({ type: 'danger', section: 'hr', title: '⚠️ Riesgo alto de rotación', message: 'Múltiples indicadores de problemas en recursos humanos.', priority: 1 });
+            }
+            if (sectionScores.technology && sectionScores.technology.average <= 2) {
+                insights.push({ type: 'info', section: 'technology', title: '💡 Oportunidad de automatización', message: 'Explorar opciones tecnológicas podría mejorar eficiencia.', priority: 2 });
+            }
+            if (sectionScores.biosecurity && sectionScores.biosecurity.lowScores >= 2) {
+                insights.push({ type: 'danger', section: 'biosecurity', title: '🚨 Alerta de bioseguridad', message: 'Brechas importantes en protocolos de bioseguridad.', priority: 1 });
+            }
+            if (sectionScores.clients && sectionScores.clients.average >= 4) {
+                insights.push({ type: 'success', section: 'clients', title: '🌟 Fortaleza: Atención al cliente', message: 'Excelente enfoque en el cliente.', priority: 3 });
+            }
+            if (sectionScores.compliance && sectionScores.compliance.lowScores >= 2) {
+                insights.push({ type: 'danger', section: 'compliance', title: '⚖️ Riesgo de cumplimiento', message: 'Posibles brechas en cumplimiento normativo.', priority: 1 });
+            }
+            
+            insights.sort((a, b) => a.priority - b.priority);
+            return { insights, sectionScores };
+        };
+        
+        // ===================== COMPONENTS =====================
+        
+        const Header = ({ currentView, progress }) => (
+            <header className="bg-gradient-vet text-white sticky top-0 z-50 shadow-lg">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <span className="text-2xl">🏥</span>
+                            </div>
+                            <div>
+                                <h1 className="font-display text-xl md:text-2xl font-bold">Diagnóstico Veterinario</h1>
+                                <p className="text-white/80 text-sm">Autodiagnóstico de Vulnerabilidades</p>
+                            </div>
+                        </div>
+                    </div>
+                    {currentView === 'survey' && (
+                        <div className="mt-4">
+                            <div className="flex items-center justify-between text-sm mb-2">
+                                <span>Progreso general</span>
+                                <span className="font-semibold">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                <div className="h-full bg-white rounded-full progress-fill" style={{ width: `${progress}%` }}></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </header>
+        );
+        
+        const IntroScreen = ({ onStart }) => {
+            const [clinicName, setClinicName] = useState('');
+            const [role, setRole] = useState('');
+            const [email, setEmail] = useState('');
+            
+            return (
+                <div className="min-h-[80vh] flex items-center justify-center p-4">
+                    <div className="max-w-2xl w-full">
+                        <div className="text-center mb-8 animate-fade-in-up">
+                            <div className="w-24 h-24 bg-gradient-vet rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl">
+                                <span className="text-5xl">🩺</span>
+                            </div>
+                            <h2 className="font-display text-3xl md:text-4xl font-bold text-green-800 mb-4">
+                                Diagnóstico de Vulnerabilidades
+                            </h2>
+                            <p className="text-gray-600 text-lg">
+                                Identifique fortalezas y áreas de mejora en su clínica veterinaria.
+                            </p>
+                        </div>
+                        
+                        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 card-hover">
+                            <h3 className="font-display text-xl font-semibold text-gray-800 mb-6">Información Inicial</h3>
+                            
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de la Clínica *</label>
+                                    <input
+                                        type="text"
+                                        value={clinicName}
+                                        onChange={(e) => setClinicName(e.target.value)}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                                        placeholder="Ej: Clínica Veterinaria San Francisco"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Su Rol *</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {ROLES.map((r) => (
+                                            <button
+                                                key={r.id}
+                                                onClick={() => setRole(r.id)}
+                                                className={`p-3 rounded-xl border-2 transition-all text-left ${
+                                                    role === r.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <span className="text-xl mb-1 block">{r.icon}</span>
+                                                <span className="text-sm font-medium">{r.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico (opcional)</label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                                        placeholder="Para recibir el reporte"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <button
+                                onClick={() => onStart({ clinicName, role, email })}
+                                disabled={!clinicName || !role}
+                                className={`w-full mt-8 py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
+                                    clinicName && role ? 'bg-gradient-vet text-white hover:shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                }`}
+                            >
+                                Comenzar Diagnóstico →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const LikertScale = ({ value, onChange, questionId }) => (
+            <div className="flex justify-between gap-2 mt-4">
+                {LIKERT_OPTIONS.map((option) => (
+                    <button
+                        key={option.value}
+                        onClick={() => onChange(questionId, option.value)}
+                        className={`likert-option flex-1 p-3 rounded-xl border-2 transition-all ${
+                            value === option.value ? `${option.color} text-white border-transparent selected shadow-lg` : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                        }`}
+                        title={option.label}
+                    >
+                        <span className="text-xl block mb-1">{option.emoji}</span>
+                        <span className="text-xs font-medium block">{option.value}</span>
+                    </button>
+                ))}
+            </div>
+        );
+        
+        const QuestionCard = ({ question, index, value, onChange }) => (
+            <div className="bg-white rounded-xl p-5 shadow-sm card-hover">
+                <div className="flex items-start gap-3">
+                    <span className="w-8 h-8 bg-green-100 text-green-700 rounded-lg flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                        {index + 1}
+                    </span>
+                    <div className="flex-1">
+                        <p className="text-gray-800 font-medium">{question.text}</p>
+                        {question.type === 'likert' ? (
+                            <LikertScale value={value} onChange={onChange} questionId={question.id} />
+                        ) : (
+                            <textarea
+                                value={value || ''}
+                                onChange={(e) => onChange(question.id, e.target.value)}
+                                className="w-full mt-3 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none resize-none"
+                                rows="3"
+                                placeholder="Escriba su respuesta aquí..."
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+        
+        const InsightCard = ({ insight }) => {
+            const colors = {
+                danger: 'bg-red-50 border-red-200 text-red-800',
+                warning: 'bg-amber-50 border-amber-200 text-amber-800',
+                info: 'bg-blue-50 border-blue-200 text-blue-800',
+                success: 'bg-green-50 border-green-200 text-green-800'
+            };
+            
+            return (
+                <div className={`p-4 rounded-xl border-2 ${colors[insight.type]}`}>
+                    <h4 className="font-semibold mb-1">{insight.title}</h4>
+                    <p className="text-sm opacity-90">{insight.message}</p>
+                </div>
+            );
+        };
+        
+        const SurveyScreen = ({ clinicInfo, responses, setResponses, onComplete }) => {
+            const [currentSection, setCurrentSection] = useState(0);
+            const section = SURVEY_SECTIONS[currentSection];
+            
+            const handleChange = (questionId, value) => {
+                setResponses(prev => ({ ...prev, [questionId]: value }));
+            };
+            
+            const { insights, sectionScores } = useMemo(() => analyzeResponses(responses), [responses]);
+            
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-6">
+                    {/* Section selector mobile */}
+                    <div className="mb-4">
+                        <select
+                            value={currentSection}
+                            onChange={(e) => setCurrentSection(Number(e.target.value))}
+                            className="w-full p-3 border-2 border-gray-200 rounded-xl bg-white"
+                        >
+                            {SURVEY_SECTIONS.map((s, idx) => (
+                                <option key={s.id} value={idx}>{s.icon} {s.title}</option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    {/* Section header */}
+                    <div className={`bg-gradient-to-r ${section.color} rounded-2xl p-6 text-white mb-6 shadow-lg`}>
+                        <div className="flex items-center gap-4">
+                            <span className="text-4xl">{section.icon}</span>
+                            <div>
+                                <p className="text-white/80 text-sm">Sección {currentSection + 1} de {SURVEY_SECTIONS.length}</p>
+                                <h2 className="font-display text-2xl font-bold">{section.title}</h2>
+                            </div>
+                        </div>
+                        <p className="mt-3 text-white/90">{section.description}</p>
+                    </div>
+                    
+                    {/* Questions */}
+                    <div className="space-y-4 mb-6">
+                        {section.questions.map((question, idx) => (
+                            <QuestionCard key={question.id} question={question} index={idx} value={responses[question.id]} onChange={handleChange} />
+                        ))}
+                    </div>
+                    
+                    {/* Navigation */}
+                    <div className="flex justify-between gap-4">
+                        <button
+                            onClick={() => { setCurrentSection(currentSection - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            disabled={currentSection === 0}
+                            className={`px-6 py-3 rounded-xl font-medium ${currentSection === 0 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        >
+                            ← Anterior
+                        </button>
+                        
+                        {currentSection === SURVEY_SECTIONS.length - 1 ? (
+                            <button onClick={onComplete} className="px-6 py-3 bg-gradient-vet text-white rounded-xl font-semibold hover:shadow-lg">
+                                Ver Resultados 📊
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => { setCurrentSection(currentSection + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                className="px-6 py-3 bg-gradient-vet text-white rounded-xl font-medium hover:shadow-lg"
+                            >
+                                Siguiente →
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Live insights */}
+                    {insights.length > 0 && (
+                        <div className="mt-8 bg-white rounded-xl shadow-sm p-4">
+                            <h3 className="font-display text-lg font-semibold text-gray-800 mb-4">📊 Análisis en Vivo</h3>
+                            <div className="space-y-3">
+                                {insights.slice(0, 3).map((insight, idx) => (
+                                    <InsightCard key={idx} insight={insight} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const RadarChart = ({ sectionScores }) => {
+            const canvasRef = useRef(null);
+            
+            useEffect(() => {
+                if (!canvasRef.current || Object.keys(sectionScores).length === 0) return;
+                
+                const ctx = canvasRef.current.getContext('2d');
+                const labels = SURVEY_SECTIONS.filter(s => sectionScores[s.id]).map(s => s.title.split(' ').slice(0, 2).join(' '));
+                const data = SURVEY_SECTIONS.filter(s => sectionScores[s.id]).map(s => sectionScores[s.id].average);
+                
+                if (window.radarChart) window.radarChart.destroy();
+                
+                window.radarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Puntuación',
+                            data,
+                            fill: true,
+                            backgroundColor: 'rgba(22, 163, 74, 0.2)',
+                            borderColor: 'rgba(22, 163, 74, 1)',
+                            pointBackgroundColor: 'rgba(22, 163, 74, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }, [sectionScores]);
+            
+            return <canvas ref={canvasRef} />;
+        };
+        
+        const ResultsScreen = ({ clinicInfo, responses, onRestart }) => {
+            const [leadEmail, setLeadEmail] = useState('');
+            const [leadSent, setLeadSent] = useState(false);
+            
+            const { insights, sectionScores } = useMemo(() => analyzeResponses(responses), [responses]);
+            
+            const overallScore = useMemo(() => {
+                const scores = Object.values(sectionScores).map(s => s.average);
+                return scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
+            }, [sectionScores]);
+            
+            const getScoreLabel = (score) => {
+                if (score >= 4) return { text: 'Excelente', color: 'text-green-600', bg: 'bg-green-100' };
+                if (score >= 3) return { text: 'Bueno', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+                if (score >= 2) return { text: 'Mejorable', color: 'text-orange-600', bg: 'bg-orange-100' };
+                return { text: 'Crítico', color: 'text-red-600', bg: 'bg-red-100' };
+            };
+            
+            const scoreLabel = getScoreLabel(overallScore);
+            
+            const handleLeadSubmit = (e) => {
+                e.preventDefault();
+                if (!leadEmail) return;
+                sendToFormspree({ _subject: "📧 Lead Magnet: " + clinicInfo.clinicName, tipo: "LEAD_MAGNET", clinica: clinicInfo.clinicName, email: leadEmail });
+                setLeadSent(true);
+            };
+            
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-8">
+                    <div className="text-center mb-8">
+                        <div className="w-20 h-20 bg-gradient-vet rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                            <span className="text-4xl">📊</span>
+                        </div>
+                        <h2 className="font-display text-3xl font-bold text-gray-800 mb-2">Resultados del Diagnóstico</h2>
+                        <p className="text-gray-600">{clinicInfo.clinicName}</p>
+                    </div>
+                    
+                    {/* Score */}
+                    <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                        <div className="text-center">
+                            <div className={`w-32 h-32 ${scoreLabel.bg} rounded-full mx-auto flex items-center justify-center`}>
+                                <div>
+                                    <span className={`text-5xl font-display font-bold ${scoreLabel.color}`}>{overallScore}</span>
+                                    <span className={`block text-sm ${scoreLabel.color}`}>/5</span>
+                                </div>
+                            </div>
+                            <p className={`mt-2 font-semibold ${scoreLabel.color}`}>{scoreLabel.text}</p>
+                        </div>
+                    </div>
+                    
+                    {/* Radar */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                        <h3 className="font-display text-lg font-semibold text-gray-800 mb-4">Perfil por Dimensiones</h3>
+                        <RadarChart sectionScores={sectionScores} />
+                    </div>
+                    
+                    {/* Insights */}
+                    {insights.length > 0 && (
+                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                            <h3 className="font-display text-xl font-semibold text-gray-800 mb-6">💡 Recomendaciones</h3>
+                            <div className="space-y-4">
+                                {insights.map((insight, idx) => (
+                                    <InsightCard key={idx} insight={insight} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* CTA */}
+                    <div className="bg-gradient-vet rounded-3xl p-8 mb-8 text-white text-center">
+                        <h3 className="font-display text-2xl font-bold mb-4">
+                            ¿Quiere un Plan de Acción Personalizado?
+                        </h3>
+                        <p className="text-white/80 mb-6">
+                            Consulta 1-a-1 con Dr. Luis Maroto, DVM, PhD • 45 minutos • $97 USD
+                        </p>
+                        <a
+                            href="https://meetings-na2.hubspot.com/luis-o"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block px-8 py-4 bg-white text-green-700 rounded-xl font-bold text-lg hover:shadow-xl transition-all"
+                        >
+                            Agendar Consulta →
+                        </a>
+                    </div>
+                    
+                    {/* Lead capture */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                        {leadSent ? (
+                            <div className="text-center py-4">
+                                <span className="text-4xl">✅</span>
+                                <p className="text-green-600 font-semibold mt-2">¡Enviado!</p>
+                            </div>
+                        ) : (
+                            <div className="text-center">
+                                <p className="text-gray-600 mb-4">¿No está listo? Reciba una guía gratuita:</p>
+                                <form onSubmit={handleLeadSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                                    <input
+                                        type="email"
+                                        value={leadEmail}
+                                        onChange={(e) => setLeadEmail(e.target.value)}
+                                        placeholder="Su correo"
+                                        required
+                                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                                    />
+                                    <button type="submit" className="px-6 py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-700">
+                                        Enviar 📧
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="text-center">
+                        <button onClick={onRestart} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300">
+                            🔄 Nuevo Diagnóstico
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+        
+        // ===================== APP =====================
+        const App = () => {
+            const [currentView, setCurrentView] = useState('intro');
+            const [clinicInfo, setClinicInfo] = useState(null);
+            const [responses, setResponses] = useState({});
+            
+            const totalQuestions = SURVEY_SECTIONS.reduce((acc, s) => acc + s.questions.length, 0);
+            const progress = (Object.keys(responses).length / totalQuestions) * 100;
+            
+            const handleStart = (info) => {
+                setClinicInfo(info);
+                setCurrentView('survey');
+            };
+            
+            const handleComplete = () => {
+                // Calculate and send to Formspree
+                const scores = {};
+                SURVEY_SECTIONS.forEach(section => {
+                    const vals = section.questions.filter(q => q.type === 'likert').map(q => responses[q.id]).filter(Boolean);
+                    if (vals.length) scores[section.title] = (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(2);
+                });
+                
+                const overall = Object.values(scores).length 
+                    ? (Object.values(scores).map(Number).reduce((a,b) => a+b, 0) / Object.values(scores).length).toFixed(2)
+                    : "N/A";
+                
+                sendToFormspree({
+                    _subject: "🏥 Diagnóstico: " + clinicInfo.clinicName + " (" + overall + "/5)",
+                    tipo: "ENCUESTA",
+                    fecha: new Date().toLocaleString('es-ES'),
+                    clinica: clinicInfo.clinicName,
+                    rol: clinicInfo.role,
+                    email: clinicInfo.email || "No proporcionado",
+                    score: overall,
+                    puntuaciones: JSON.stringify(scores)
+                });
+                
+                setCurrentView('results');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            
+            const handleRestart = () => {
+                setClinicInfo(null);
+                setResponses({});
+                setCurrentView('intro');
+            };
+            
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <Header currentView={currentView} progress={progress} />
+                    <main className="flex-1">
+                        {currentView === 'intro' && <IntroScreen onStart={handleStart} />}
+                        {currentView === 'survey' && clinicInfo && (
+                            <SurveyScreen clinicInfo={clinicInfo} responses={responses} setResponses={setResponses} onComplete={handleComplete} />
+                        )}
+                        {currentView === 'results' && clinicInfo && (
+                            <ResultsScreen clinicInfo={clinicInfo} responses={responses} onRestart={handleRestart} />
+                        )}
+                    </main>
+                    <footer className="bg-gray-900 text-white py-8">
+                        <div className="max-w-4xl mx-auto px-4 text-center">
+                            <p className="text-gray-400 text-sm">© {new Date().getFullYear()} MarDigital™ NexusVet.AI/VetConnect</p>
+                            <p className="text-gray-500 text-xs mt-2">lmarotomar@mardigitalhub.com</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+        
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
