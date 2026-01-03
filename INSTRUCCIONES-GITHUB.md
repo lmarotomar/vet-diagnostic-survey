@@ -210,8 +210,8 @@ Genera uno gratis en [qr-code-generator.com](https://www.qr-code-generator.com/)
 ---
 
 **¿Necesitas ayuda?** 
-📧 lmarotomar@mardigitalhub.com
+📧 lmarotomar@biovetai.org
 
 ---
 
-*Ecosistema Integrado MarDigital™ NexusVet.AI/VetConnect*
+*Ecosistema Integrado BioVetAI™ NexusVet.AI/VetConnect*
