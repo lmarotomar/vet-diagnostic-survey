@@ -7,11 +7,11 @@
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MarDigital™-NexusVet.AI-16a34a?style=for-the-badge" alt="MarDigital">
+  <img src="https://img.shields.io/badge/BioVetAI™-NexusVet.AI-16a34a?style=for-the-badge" alt="BioVetAI">
   <img src="https://img.shields.io/badge/VetConnect-Ecosystem-166534?style=for-the-badge" alt="VetConnect">
 </p>
 
-> **Ecosistema Integrado MarDigital™ NexusVet.AI/VetConnect**
+> **Ecosistema Integrado BioVetAI™ NexusVet.AI/VetConnect**
 
 Una herramienta de autodiagnóstico estructurada para clínicas veterinarias que evalúa 10 dimensiones clave y genera insights en tiempo real.
 
@@ -600,14 +600,14 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 **Desarrollado por:**
 - **Prof. Luis Orlando Maroto Martín, DVM, PhD**
-- MarDigital™ - Ecosistema Integrado
+- BioVetAI™ - Ecosistema Integrado
 
 ---
 
 ## 📞 Soporte
 
-**Ecosistema Integrado MarDigital™**
-- 📧 Email: lmarotomar@mardigitalhub.com
+**Ecosistema Integrado BioVetAI™**
+- 📧 Email: lmarotomar@biovetai.org
 - 🌐 NexusVet.AI | VetConnect
 
 ---
@@ -617,5 +617,5 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 </p>
 
 <p align="center">
-  © 2024 MarDigital™ - Todos los derechos reservados
+  © 2025 BioVetAI™ - Todos los derechos reservados
 </p>
