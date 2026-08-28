@@ -56,7 +56,7 @@ Link de reuniones: `https://meetings-na2.hubspot.com/luis-o`
 
 ```bash
 # 1. Clonar el repositorio vacío
-git clone https://github.com/TU_USUARIO/vet-diagnostic-survey.git
+git clone https://github.com/lmarotomar/vet-diagnostic-survey.git
 cd vet-diagnostic-survey
 
 # 2. Copiar los archivos descargados a esta carpeta
@@ -93,7 +93,7 @@ git push origin main
 
 1. Actualiza la página de Settings → Pages
 2. Verás un mensaje verde: **"Your site is live at..."**
-3. Tu URL será: `https://TU_USUARIO.github.io/vet-diagnostic-survey/`
+3. Tu URL será: `https://lmarotomar.github.io/vet-diagnostic-survey/`
 
 🎉 **¡Listo! Ya puedes compartir este enlace.**
 
@@ -105,7 +105,7 @@ git push origin main
 2. Abre `README.md`
 3. Haz clic en el ícono de lápiz (editar)
 4. Reemplaza todas las instancias de:
-   - `YOUR_USERNAME` → tu nombre de usuario de GitHub
+   - `lmarotomar` → tu nombre de usuario de GitHub
 5. Clic en **"Commit changes"**
 
 ---
@@ -116,13 +116,13 @@ Si quieres usar un dominio como `diagnostico.nexusvet.ai`:
 
 1. En Settings → Pages → Custom domain
 2. Ingresa tu dominio
-3. Crea un registro CNAME en tu DNS apuntando a `TU_USUARIO.github.io`
+3. Crea un registro CNAME en tu DNS apuntando a `lmarotomar.github.io`
 
 ---
 
 ## 📊 Verificar que funciona
 
-1. Abre tu URL: `https://TU_USUARIO.github.io/vet-diagnostic-survey/`
+1. Abre tu URL: `https://lmarotomar.github.io/vet-diagnostic-survey/`
 2. Deberías ver la pantalla de inicio con:
    - Logo de diagnóstico veterinario
    - Formulario para nombre de clínica y rol
@@ -151,7 +151,7 @@ Una vez publicado, puedes compartir:
 
 **Enlace directo:**
 ```
-https://TU_USUARIO.github.io/vet-diagnostic-survey/
+https://lmarotomar.github.io/vet-diagnostic-survey/
 ```
 
 **Código QR:**
@@ -161,9 +161,9 @@ Genera uno gratis en [qr-code-generator.com](https://www.qr-code-generator.com/)
 ```
 🏥 Nueva herramienta gratuita para clínicas veterinarias!
 
-📊 Diagnóstico de Vulnerabilidades - Evalúa 10 dimensiones clave de tu clínica
+📊 Diagnóstico de Vulnerabilidades - Evalúa las áreas clave de tu clínica (con score en tecnología/procesos/IA, contexto informativo en el resto)
 
-👉 https://TU_USUARIO.github.io/vet-diagnostic-survey/
+👉 https://lmarotomar.github.io/vet-diagnostic-survey/
 
 #Veterinaria #Gestión #NexusVet
 ```

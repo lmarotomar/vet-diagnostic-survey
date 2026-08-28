@@ -1,7 +1,7 @@
-# 🏥 Diagnóstico de Vulnerabilidades - Clínicas Veterinarias
+# 🏥 VetClinic 360™ — Encuesta de Madurez Digital, Procesos e IA (Clínicas Veterinarias)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://YOUR_USERNAME.github.io/vet-diagnostic-survey/)
+[![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://lmarotomar.github.io/vet-diagnostic-survey/)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
@@ -13,11 +13,13 @@
 
 > **Ecosistema Integrado BioVetAI™ NexusVet.AI/VetConnect**
 
-Una herramienta de autodiagnóstico estructurada para clínicas veterinarias que evalúa 10 dimensiones clave y genera insights en tiempo real.
+Herramienta de autodiagnóstico para clínicas veterinarias — 26 preguntas en 8 bloques (marketing digital, tecnología, procesos, documentación clínica, adopción de IA, automatización de ingresos, barreras/inversión). Calcula un **Nivel de Madurez Digital** (Inicial / En Desarrollo / Avanzado) a partir de respuestas fácticas y objetivas — no autopercepción tipo "califícate 1-5" — evitando así afirmar autoridad certificadora que BioVetAI™ no tiene. Contenido completo y lógica de cálculo en `Encuesta_Madurez_Digital_Spec.md` (carpeta padre).
+
+> Modelo anterior (10-12 dimensiones con score subjetivo tipo "Excelencia 5.0/5.0") quedó retirado 2026-08-04 tras feedback metodológico real de una prospecto (ver `01. Animal Hospital of Pembroke/`) — el nuevo modelo resuelve el problema por alcance (nunca pregunta fuera de la competencia de BioVetAI™), no por disclaimer.
 
 ## 🌐 Demo en Vivo
 
-**[👉 Ver Demo](https://YOUR_USERNAME.github.io/vet-diagnostic-survey/)**
+**[👉 Ver Demo](https://lmarotomar.github.io/vet-diagnostic-survey/)**
 
 *(Actualiza este enlace después de publicar en GitHub Pages)*
 
@@ -42,13 +44,13 @@ Una herramienta de autodiagnóstico estructurada para clínicas veterinarias que
 ### Opción 1: Usar directamente (Sin instalación)
 ```bash
 # Simplemente abre index.html en tu navegador
-# O accede a la demo: https://YOUR_USERNAME.github.io/vet-diagnostic-survey/
+# O accede a la demo: https://lmarotomar.github.io/vet-diagnostic-survey/
 ```
 
 ### Opción 2: Servidor local
 ```bash
 # Clonar repositorio
-git clone https://github.com/YOUR_USERNAME/vet-diagnostic-survey.git
+git clone https://github.com/lmarotomar/vet-diagnostic-survey.git
 cd vet-diagnostic-survey
 
 # Servir con Python
@@ -64,13 +66,15 @@ Luego visita `http://localhost:8000`
 
 ## 📋 Características
 
-- ✅ **10 Dimensiones de Análisis**: Estrategia, Cliente, Procesos, Bioseguridad, RRHH, Tecnología, Finanzas, Marketing, Calidad, Cumplimiento Legal
-- ✅ **Preguntas Likert (1-5)** + Preguntas Abiertas
-- ✅ **Análisis en Tiempo Real** con alertas visuales (semáforos)
-- ✅ **Dashboard de Resultados** con gráfico radar
+- ✅ **26 preguntas en 8 bloques**: Perfil, Marketing Digital, Tecnología, Procesos, Documentación Clínica, Adopción de IA, Automatización de Ingresos, Barreras/Inversión — ver `Encuesta_Madurez_Digital_Spec.md` (carpeta padre) para el detalle completo
+- ✅ **Nivel de Madurez Digital** (Inicial / En Desarrollo / Avanzado) calculado de 20 preguntas fácticas — no autopercepción subjetiva
+- ✅ **Datos de calificación de venta separados** (Bloque 7: barrera, disposición a invertir, solución preferida) — no se mezclan con el Nivel de Madurez
+- ✅ **Tipos de pregunta**: single-choice, multi-choice, likert-1-5 (solo 2 preguntas), open
 - ✅ **Exportación** a JSON y CSV
 - ✅ **Diseño Responsivo** y profesional
 - ✅ **Código modular** preparado para expansión
+
+> **Nota de alcance:** el diseño evita afirmar autoridad certificadora fuera de la competencia de BioVetAI™ por construcción — nunca se pregunta sobre Legal, Finanzas o RRHH con intención de evaluarlos, y el Nivel de Madurez se calcula de hechos reportados (qué sistema usan, qué tan seguido publican), no de autopercepción de calidad.
 
 ---
 
@@ -87,6 +91,8 @@ Luego visita `http://localhost:8000`
 ---
 
 ## 🗄️ Esquema de Base de Datos (Supabase/PostgreSQL)
+
+> ⚠️ **Desactualizado — pendiente de rediseño.** El schema de abajo corresponde al modelo viejo (10 dimensiones, `section_scores` con score 1-5 por sección). No se reescribe todavía a propósito: Cc lo rediseña una sola vez, cuando Cd entregue la versión final de Madurez Digital, para no reconectar dos veces. Referencia de tipos de pregunta nuevos (`single-choice`, `multi-choice`) y separación maturity/qualification: `Encuesta_Madurez_Digital_Spec.md`.
 
 ```sql
 -- ============================================
