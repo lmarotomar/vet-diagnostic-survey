@@ -92,198 +92,57 @@ Luego visita `http://localhost:8000`
 
 ## 🗄️ Esquema de Base de Datos (Supabase/PostgreSQL)
 
-> ⚠️ **Desactualizado — pendiente de rediseño.** El schema de abajo corresponde al modelo viejo (10 dimensiones, `section_scores` con score 1-5 por sección). No se reescribe todavía a propósito: Cc lo rediseña una sola vez, cuando Cd entregue la versión final de Madurez Digital, para no reconectar dos veces. Referencia de tipos de pregunta nuevos (`single-choice`, `multi-choice`) y separación maturity/qualification: `Encuesta_Madurez_Digital_Spec.md`.
+> ✅ **Migrado y en producción** (verificado 2026-08-28) — schema real del modelo de Madurez Digital, reusando el proyecto Supabase de VetPrompt Pro (RLS aísla estas 3 tablas de `casos_veterinarios`). Detalle de preguntas/bloques: `Encuesta_Madurez_Digital_Spec.md`.
 
 ```sql
 -- ============================================
--- ESQUEMA DE BASE DE DATOS
--- Diagnóstico Veterinario - NexusVet.AI
+-- ESQUEMA DE BASE DE DATOS — VetClinic 360
+-- Proyecto Supabase compartido con VetPrompt Pro
 -- ============================================
 
--- Habilitar extensiones necesarias
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ============================================
--- TABLA: clinics (Clínicas registradas)
--- ============================================
 CREATE TABLE clinics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    address TEXT,
-    city VARCHAR(100),
-    country VARCHAR(100) DEFAULT 'España',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ============================================
--- TABLA: survey_sessions (Sesiones de encuesta)
--- ============================================
 CREATE TABLE survey_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    clinic_id UUID REFERENCES clinics(id) ON DELETE SET NULL,
-    respondent_role VARCHAR(50) NOT NULL,
-    respondent_email VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'in_progress', -- 'in_progress', 'completed', 'abandoned'
-    overall_score DECIMAL(3,2),
-    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    ip_address INET,
-    user_agent TEXT,
-    metadata JSONB DEFAULT '{}'::jsonb
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clinic_id UUID REFERENCES clinics(id),
+    maturity_score NUMERIC,
+    maturity_tier TEXT,
+    status TEXT DEFAULT 'completed',
+    started_at TIMESTAMPTZ DEFAULT now(),
+    completed_at TIMESTAMPTZ
 );
 
--- ============================================
--- TABLA: survey_responses (Respuestas individuales)
--- ============================================
 CREATE TABLE survey_responses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES survey_sessions(id) ON DELETE CASCADE,
-    section_id VARCHAR(50) NOT NULL,
-    question_id VARCHAR(50) NOT NULL,
-    question_type VARCHAR(20) NOT NULL, -- 'likert', 'open'
-    response_value INTEGER, -- Para Likert (1-5)
-    response_text TEXT, -- Para preguntas abiertas
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT unique_session_question UNIQUE(session_id, question_id)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES survey_sessions(id),
+    block_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    question_type TEXT NOT NULL, -- 'single-choice' | 'multi-choice' | 'likert-1-5' | 'open'
+    value JSONB NOT NULL -- entero, array de enteros, o string según question_type
 );
 
 -- ============================================
--- TABLA: section_scores (Puntuaciones por sección)
+-- ROW LEVEL SECURITY — solo INSERT para anon, sin SELECT
+-- (nadie puede leer datos de otra clínica con la anon key)
 -- ============================================
-CREATE TABLE section_scores (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES survey_sessions(id) ON DELETE CASCADE,
-    section_id VARCHAR(50) NOT NULL,
-    average_score DECIMAL(3,2),
-    total_questions INTEGER,
-    answered_questions INTEGER,
-    low_score_count INTEGER DEFAULT 0, -- Respuestas con valor 1 o 2
-    status VARCHAR(20), -- 'good', 'warning', 'danger'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT unique_session_section UNIQUE(session_id, section_id)
-);
-
--- ============================================
--- TABLA: insights (Insights generados)
--- ============================================
-CREATE TABLE insights (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES survey_sessions(id) ON DELETE CASCADE,
-    insight_type VARCHAR(20) NOT NULL, -- 'danger', 'warning', 'info', 'success'
-    section_id VARCHAR(50),
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    priority INTEGER DEFAULT 3,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- ÍNDICES para optimizar consultas
--- ============================================
-CREATE INDEX idx_sessions_clinic ON survey_sessions(clinic_id);
-CREATE INDEX idx_sessions_status ON survey_sessions(status);
-CREATE INDEX idx_sessions_created ON survey_sessions(started_at DESC);
-CREATE INDEX idx_responses_session ON survey_responses(session_id);
-CREATE INDEX idx_responses_section ON survey_responses(section_id);
-CREATE INDEX idx_scores_session ON section_scores(session_id);
-CREATE INDEX idx_insights_session ON insights(session_id);
-CREATE INDEX idx_insights_type ON insights(insight_type);
-
--- ============================================
--- FUNCIONES Y TRIGGERS
--- ============================================
-
--- Función para actualizar updated_at automáticamente
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger para clinics
-CREATE TRIGGER update_clinics_updated_at
-    BEFORE UPDATE ON clinics
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Función para calcular score de sección
-CREATE OR REPLACE FUNCTION calculate_section_score(p_session_id UUID, p_section_id VARCHAR)
-RETURNS TABLE(avg_score DECIMAL, total_q INTEGER, answered_q INTEGER, low_count INTEGER) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        COALESCE(AVG(response_value)::DECIMAL(3,2), 0) as avg_score,
-        COUNT(*)::INTEGER as total_q,
-        COUNT(response_value)::INTEGER as answered_q,
-        COUNT(*) FILTER (WHERE response_value <= 2)::INTEGER as low_count
-    FROM survey_responses
-    WHERE session_id = p_session_id 
-      AND section_id = p_section_id 
-      AND question_type = 'likert';
-END;
-$$ LANGUAGE plpgsql;
-
--- ============================================
--- VISTAS para reportes
--- ============================================
-
--- Vista de resumen por sesión
-CREATE OR REPLACE VIEW v_session_summary AS
-SELECT 
-    ss.id as session_id,
-    c.name as clinic_name,
-    ss.respondent_role,
-    ss.status,
-    ss.overall_score,
-    ss.started_at,
-    ss.completed_at,
-    COUNT(DISTINCT sr.question_id) as questions_answered,
-    COUNT(DISTINCT i.id) as insights_count,
-    COUNT(DISTINCT i.id) FILTER (WHERE i.insight_type = 'danger') as danger_insights
-FROM survey_sessions ss
-LEFT JOIN clinics c ON ss.clinic_id = c.id
-LEFT JOIN survey_responses sr ON ss.id = sr.session_id
-LEFT JOIN insights i ON ss.id = i.session_id
-GROUP BY ss.id, c.name;
-
--- Vista de promedios por sección global
-CREATE OR REPLACE VIEW v_section_averages AS
-SELECT 
-    section_id,
-    AVG(average_score) as global_average,
-    COUNT(*) as total_sessions,
-    AVG(low_score_count) as avg_low_scores
-FROM section_scores
-GROUP BY section_id;
-
--- ============================================
--- ROW LEVEL SECURITY (RLS) - Opcional
--- ============================================
-
--- Habilitar RLS en tablas sensibles
+ALTER TABLE clinics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE survey_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE survey_responses ENABLE ROW LEVEL SECURITY;
 
--- Política: Los usuarios autenticados pueden ver sus propias sesiones
--- (Descomentrar si se implementa autenticación)
--- CREATE POLICY "Users can view own sessions" ON survey_sessions
---     FOR SELECT USING (auth.uid()::text = metadata->>'user_id');
-
--- ============================================
--- DATOS DE PRUEBA (opcional)
--- ============================================
-
--- Insertar clínica de ejemplo
-INSERT INTO clinics (name, email, city, country) VALUES
-('Clínica Veterinaria Demo', 'demo@example.com', 'Madrid', 'España');
+CREATE POLICY "anon insert clinics" ON clinics FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update clinic email" ON clinics FOR UPDATE TO anon USING (true); -- captura tardía de email en resultados
+CREATE POLICY "anon insert sessions" ON survey_sessions FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon insert responses" ON survey_responses FOR INSERT TO anon WITH CHECK (true);
 ```
+
+**Nivel de Madurez Digital:** calculado client-side de las 20 preguntas `maturity=true` (bloques marketing, technology, processes, doc_clinical, ai_adoption, revenue_automation) — normalizado 0-1 por pregunta y promediado ×100. Tiers: 0-33 Inicial, 34-66 En Desarrollo, 67-100 Avanzado. Ver `computeMaturity()` en `index.html`.
+
+**Bloques profile y barriers_investment** (inv1/inv2/inv3) se guardan igual pero no entran al cálculo de madurez — calificación de venta, mostrada aparte en resultados.
 
 ---
 
