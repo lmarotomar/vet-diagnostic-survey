@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudios de Campo — BioVetAI™</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --text: #2B2B2B;
+    --text-muted: #6B6A61;
+    --hairline: rgba(43,43,43,0.12);
+    --navy: #004491;
+    --teal: #038699;
+    --orange: #FE6100;
+    --gauge-track: #D8D4C8;
+    --shadow: rgba(43,43,43,0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C1B1E;
+      --surface: #12262A;
+      --text: #ECE7DC;
+      --text-muted: #9EB0AC;
+      --hairline: rgba(236,231,220,0.14);
+      --navy: #6FA1E0;
+      --teal: #35C4D8;
+      --orange: #FF9354;
+      --gauge-track: #26403F;
+      --shadow: rgba(0,0,0,0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background-image:
+      linear-gradient(var(--hairline) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+    background-size: 32px 32px;
+    min-height: 100vh;
+    padding: clamp(28px, 6vw, 72px) clamp(20px, 6vw, 64px) 40px;
+  }
+
+  img { max-width: 100%; }
+
+  h1, h2 { font-family: "Playfair Display", Georgia, serif; text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  header.top {
+    max-width: 900px;
+    margin: 0 auto clamp(36px, 6vw, 56px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  header.top h1 {
+    font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  header.top p {
+    max-width: 62ch;
+    font-size: 1.02rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  main.board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(18px, 3vw, 28px);
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 760px) {
+    main.board { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-top: 4px solid var(--accent);
+    padding: clamp(24px, 3.4vw, 34px);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: 0 1px 2px var(--shadow);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px -14px var(--shadow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .card:hover { transition: none; transform: none; }
+  }
+
+  .card--clinic { --accent: var(--teal); }
+  .card--prompt { --accent: var(--orange); }
+
+  .card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .card-head .eyebrow { color: var(--accent); }
+
+  .icon-wrap {
+    flex-shrink: 0;
+    width: 76px;
+    height: 76px;
+  }
+
+  .card h2 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 4px;
+  }
+
+  .tagline {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 500;
+    font-size: 0.98rem;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+
+  .card p.body-copy {
+    font-size: 0.95rem;
+    line-height: 1.62;
+    color: var(--text-muted);
+    max-width: 46ch;
+    margin: 0;
+  }
+
+  .meta-strip {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--hairline);
+    padding: 9px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta-strip strong { color: var(--text); font-weight: 500; }
+
+  .card-actions {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding-top: 4px;
+  }
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 0.94rem;
+    color: #fff;
+    background: var(--accent);
+    padding: 11px 18px;
+    text-decoration: none;
+    border: 1px solid var(--accent);
+  }
+
+  .cta:hover { filter: brightness(1.08); }
+
+  .cta:focus-visible, .cta-secondary:focus-visible {
+    outline: 2px solid var(--navy);
+    outline-offset: 2px;
+  }
+
+  .cta-secondary {
+    font-family: "DM Sans", sans-serif;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--hairline);
+  }
+
+  .cta-secondary:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+  footer.note {
+    max-width: 1080px;
+    margin: clamp(30px, 5vw, 46px) auto 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span class="eyebrow">BioVetAI™ — Investigación de Campo</span>
+  <h1>Estudios de Campo</h1>
+  <p>Dos encuestas activas, dos productos distintos. Acceso directo para responder cada una o revisar cómo va llenándose.</p>
+</header>
+
+<main class="board">
+
+  <section class="card card--clinic">
+    <div class="card-head">
+      <div>
+        <span class="eyebrow">Diagnóstico digital · Clínicas veterinarias</span>
+        <h2>VetClinic 360™</h2>
+        <div class="tagline">Encuesta de Madurez Digital</div>
+      </div>
+      <svg class="icon-wrap" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Medidor de tres niveles de madurez digital">
+        <path d="M12,60 A38,38 0 0,1 31,27.1" stroke="var(--gauge-track)" stroke-width="9" stroke-linecap="round"/>
+        <path d="M31,27.1 A38,38 0 0,1 69,27.1" stroke="var(--gauge-track)" stroke-width="9" stroke-linecap="round"/>
+        <path d="M69,27.1 A38,38 0 0,1 88,60" stroke="var(--teal)" stroke-width="9" stroke-linecap="round"/>
+        <line x1="50" y1="60" x2="71.2" y2="38.8" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="50" cy="60" r="4.5" fill="var(--text)"/>
+      </svg>
+    </div>
+    <p class="body-copy">26 preguntas en 8 bloques — marketing, tecnología, procesos, adopción de IA, automatización de ingresos. Calcula un Nivel de Madurez Digital (Inicial · En Desarrollo · Avanzado) a partir de 20 preguntas fácticas, sin invadir Legal, Finanzas ni RRHH.</p>
+    <div class="meta-strip">
+      <span>ESTADO: <strong>LISTA PARA ENVIAR</strong></span>
+      <span>26 PREGUNTAS</span>
+      <span>8 BLOQUES</span>
+    </div>
+    <div class="card-actions">
+      <a class="cta" href="../index.html">Abrir encuesta ↗</a>
+    </div>
+  </section>
+
+  <section class="card card--prompt">
+    <div class="card-head">
+      <div>
+        <span class="eyebrow">Satisfacción · Usuarios activos</span>
+        <h2>VetPrompt™ Pro</h2>
+        <div class="tagline">Encuesta de Satisfacción</div>
+      </div>
+      <svg class="icon-wrap" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Burbuja de chat con pulso de satisfacción">
+        <path d="M10,20 h70 a8,8 0 0 1 8,8 v32 a8,8 0 0 1 -8,8 h-46 l-14,14 v-14 h-10 a8,8 0 0 1 -8,-8 v-32 a8,8 0 0 1 8,-8 z" stroke="var(--orange)" stroke-width="4" fill="none" stroke-linejoin="round"/>
+        <polyline points="20,50 34,50 41,32 50,64 58,40 65,50 80,50" stroke="var(--orange)" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="body-copy">8 preguntas sobre facilidad de uso, utilidad, probabilidad de recomendación, beneficio percibido y frecuencia de uso. Se comparte manualmente por WhatsApp o email — no está enlazada desde la landing, para controlar quién responde.</p>
+    <div class="meta-strip">
+      <span>ESTADO: <strong>EN CAMPO</strong></span>
+      <span>8 PREGUNTAS</span>
+      <span>0 RESPUESTAS AL 04-SEP-2026</span>
+    </div>
+    <div class="card-actions">
+      <a class="cta" href="https://vetprompt.biovetai.org/survey/">Abrir encuesta ↗</a>
+      <a class="cta-secondary" href="https://vetprompt.biovetai.org/survey/admin.html">Ver panel de resultados ↗</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="note">Estado verificado manualmente · última revisión 2026-09-04</footer>
+
+</body>
+</html>
