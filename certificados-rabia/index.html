@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Errores en Certificados Antirrábicos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a single form column like a clinical checklist; each error is one row with two answer scales; a sticky bar keeps progress and the save button in reach. */
+:root {
+  --bg: #f5f7f7;
+  --surface: #ffffff;
+  --ink: #15262b;
+  --muted: #5a6b70;
+  --line: #d6dfe0;
+  --accent: #0f6b66;
+  --accent-soft: #e2f0ee;
+  --warn: #9a5b00;
+  --ok: #1d7a3e;
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101a1c; --surface: #172427; --ink: #e4eeee; --muted: #9db0b3; --line: #2b3d41;
+    --accent: #5cc4b9; --accent-soft: #1a3a38; --warn: #e0a54a; --ok: #6fcf8f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101a1c; --surface: #172427; --ink: #e4eeee; --muted: #9db0b3; --line: #2b3d41;
+  --accent: #5cc4b9; --accent-soft: #1a3a38; --warn: #e0a54a; --ok: #6fcf8f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 32px 120px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2 { font-family: var(--font-display); font-weight: 650; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; }
+h2 { font-size: 1.25rem; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.intro { display: grid; gap: 12px; }
+.intro p { margin: 0; max-width: 65ch; color: var(--muted); }
+.reviewed { font-size: 13px; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+input[type=text], input[type=date], textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 38px; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend b { color: var(--ink); }
+section.cat { display: grid; gap: 0; }
+section.cat > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.item { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.code { font-family: var(--font-mono); font-size: 13px; color: var(--accent); padding-top: 2px; }
+.body { display: grid; gap: 10px; min-width: 0; }
+.text { font-weight: 500; }
+.scales { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 10px 16px; }
+.scale { display: grid; gap: 4px; min-width: 0; }
+.scale-name { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font-size: 13px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; background: var(--surface); user-select: none; }
+.seg label:hover { border-color: var(--accent); }
+.seg input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.prio-alta input:first-child:checked + label { background: var(--warn); border-color: var(--warn); }
+.item.done .code::after { content: " ✓"; color: var(--ok); }
+.otros .item { grid-template-columns: 44px minmax(0, 1fr); }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding-block: 12px calc(12px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); z-index: 5; }
+.bar-in { max-width: 860px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.progress { flex: 1 1 200px; display: grid; gap: 4px; min-width: 0; }
+.track { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.ptext { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.status { font-size: 13px; color: var(--muted); }
+.status.ok { color: var(--ok); } .status.err { color: var(--warn); }
+button.save { font: inherit; font-weight: 600; background: var(--accent); color: var(--surface); border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+.start { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.hint { margin: 0; flex: 1 1 280px; font-size: 14px; color: var(--muted); }
+a.start-btn { display: inline-block; text-decoration: none; font-weight: 600; background: var(--accent); color: var(--surface); border-radius: 8px; padding: 10px 22px; }
+a.start-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#form { scroll-margin-top: 16px; }
+button.save.alt { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+button.save:disabled { opacity: .55; cursor: default; }
+.banner { border: 1px solid var(--warn); color: var(--ink); background: var(--surface); border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+@media (max-width: 620px) { .scales { grid-template-columns: 1fr; } .item { grid-template-columns: 1fr; } }
+.status:empty { display: none; }
+.js .stepped:not(.active) { display: none !important; }
+.steplabel { font-size: 13px; font-weight: 600; color: var(--ink); }
+.steplabel:empty { display: none; }
+.end { gap: 14px; }
+.end-summary { margin: 0; color: var(--muted); max-width: 65ch; }
+.end-list { display: grid; gap: 6px; }
+.end-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; text-align: left; cursor: pointer; width: 100%; }
+.end-row:hover { border-color: var(--accent); }
+.end-row .n { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; font-size: 13px; }
+.end-row.full .n { color: var(--ok); font-weight: 600; }
+.end-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+a.save { display: inline-block; text-decoration: none; text-align: center; }
+a.save.wa { background: var(--accent); color: var(--surface); }
+@media (max-width: 620px) {
+  .bar { padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .bar-in { gap: 6px 8px; }
+  .progress { flex-basis: 100%; }
+  .status { flex-basis: 100%; font-size: 12px; }
+  button.save { flex: 1 1 0; padding: 8px 10px; font-size: 14px; }
+  .wrap { padding-block-end: 140px; }
+}
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="step-start">
+  <div class="intro">
+    <div class="eyebrow">Sistema de control de calidad · Certificados de vacunación antirrábica</div>
+    <h1>¿Qué errores aparecen en los certificados de la clínica?</h1>
+    <p>Esta lista reúne 63 errores posibles. Para cada uno, marque con qué frecuencia ocurre y qué prioridad debe tener en el sistema. Sus respuestas decidirán qué controles se implementan primero. Le tomará unos 15 minutos. Sus respuestas se guardan solas en este navegador, así que puede cerrar y seguir más tarde en el mismo equipo.</p>
+    <p><b>Al terminar:</b> en la última pantalla pulse «Enviar por WhatsApp» para mandar sus respuestas a la persona que le pidió completar el formulario.</p>
+    <p>No escriba datos personales de propietarios ni de pacientes en las observaciones.</p>
+    <div class="reviewed">Reviewed by: Prof. Luis Orlando Maroto Martín, DVM, PhD</div>
+  </div>
+
+  <div id="nojs" class="banner">Está viendo una vista previa. Para marcar las respuestas y descargarlas, guarde este archivo y ábralo con un navegador: Chrome, Safari o Edge.</div>
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="panel">
+    <div class="fields">
+      <label class="f" for="fecha">Fecha<input type="date" id="fecha"></label>
+    </div>
+    <div class="legend">
+      <span><b>Frecuencia:</b> cuántas veces ocurre en la clínica.</span>
+      <span><b>Prioridad:</b> Alta = el sistema debe controlarlo desde el inicio.</span>
+    </div>
+    <div class="start">
+      <p class="hint">Revise la fecha y pulse «Comenzar». Verá una categoría por pantalla, de la A a la H, y al final una pantalla para errores que no estén en la lista. Muévase con «Siguiente» y «Anterior». En la última pantalla podrá enviar sus respuestas.</p>
+      <a class="save start-btn" id="start" href="#form">Comenzar →</a>
+    </div>
+  </div>
+  </div>
+
+  <div id="form"></div>
+
+  <section id="step-end" class="panel end">
+    <h2>Revise y envíe sus respuestas</h2>
+    <p id="end-summary" class="end-summary"></p>
+    <div id="end-list" class="end-list"></div>
+    <div class="end-actions">
+      <a class="save wa" id="wa" href="https://wa.me/" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+      <button class="save alt" id="copy" type="button">Copiar respuestas</button>
+      <button class="save alt" id="save" type="button">Descargar archivo</button>
+    </div>
+    <p class="hint">La forma más rápida: pulse «Enviar por WhatsApp», elija a la persona que le pidió completar el formulario y envíe el mensaje. También puede copiar las respuestas y pegarlas en un correo, o descargar el archivo y adjuntarlo.</p>
+  </section>
+</div>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="progress">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="steplabel" id="steplabel"></div>
+      <div class="ptext" id="ptext">0 de 63 errores respondidos</div>
+    </div>
+    <span class="status" id="status" role="status"></span>
+    <button class="save alt" id="prev" type="button" hidden>← Anterior</button>
+    <button class="save" id="next" type="button" hidden>Siguiente →</button>
+  </div>
+</div>
+
+<script>
+const CATS = [
+  { id: "A", name: "Propietario", items: [
+    "Nombre del propietario mal escrito o incompleto",
+    "Dirección incompleta o desactualizada",
+    "Teléfono o correo electrónico incorrecto",
+    "Figura el propietario anterior tras un cambio de dueño",
+    "Datos del propietario distintos en el certificado y en la historia clínica"]},
+  { id: "B", name: "Animal y microchip", items: [
+    "Nombre del animal incorrecto",
+    "Especie incorrecta",
+    "Sexo o estado reproductivo incorrecto",
+    "Raza incorrecta",
+    "Color o señas que no coinciden con el animal",
+    "Fecha de nacimiento o edad incorrecta",
+    "Peso ausente o desactualizado",
+    "Falta el número de microchip",
+    "Microchip mal transcrito (dígitos de más, de menos o cambiados)",
+    "Microchip del certificado distinto al del animal (no se escaneó)",
+    "Datos de otro animal del mismo propietario"]},
+  { id: "C", name: "Vacuna y lote", items: [
+    "Fabricante incorrecto",
+    "Nombre comercial del producto incorrecto",
+    "Número de lote mal transcrito",
+    "Lote que no corresponde al producto indicado",
+    "Lote vencido en la fecha de aplicación",
+    "Falta la fecha de caducidad del lote",
+    "Lote que no figura en el inventario de la clínica",
+    "Falta la vía o el sitio de aplicación",
+    "Producto no aprobado para la especie vacunada",
+    "Producto no autorizado en la jurisdicción"]},
+  { id: "D", name: "Fechas y vigencia", items: [
+    "Fecha de aplicación incorrecta",
+    "Fecha de aplicación futura o posterior a la emisión del certificado",
+    "Formato de fecha ambiguo (día/mes o mes/día)",
+    "Vigencia de 3 años en una primovacunación",
+    "Vigencia mayor que la permitida por la etiqueta o la ley local",
+    "Fecha de la próxima dosis mal calculada",
+    "Falta la fecha de la próxima dosis",
+    "Primovacunación registrada como refuerzo, o al revés",
+    "Animal vacunado por debajo de la edad mínima de la etiqueta",
+    "Refuerzo atrasado que no se registra como tal"]},
+  { id: "E", name: "Veterinario y firma", items: [
+    "Falta la firma del veterinario",
+    "Firma un veterinario que no aplicó ni supervisó la vacuna",
+    "Falta el número de licencia del veterinario",
+    "Licencia vencida o de otra jurisdicción",
+    "Firma escaneada o sello usados sin control",
+    "Datos de la clínica incompletos (dirección, teléfono)"]},
+  { id: "F", name: "Documento y numeración", items: [
+    "Número de certificado duplicado",
+    "Número de placa antirrábica duplicado o que no coincide con la placa entregada",
+    "Campos obligatorios en blanco",
+    "Tachaduras o correcciones a mano sin iniciales ni fecha",
+    "Letra ilegible",
+    "Formulario desactualizado o no aceptado por la autoridad",
+    "El original, la copia de la clínica y el sistema no coinciden",
+    "Certificado entregado sin dejar copia en el archivo",
+    "Certificado emitido sin que conste la vacunación en la historia clínica"]},
+  { id: "G", name: "Reporte a la autoridad y archivo", items: [
+    "Certificado no reportado a la autoridad sanitaria o al municipio",
+    "Reporte enviado fuera de plazo",
+    "Datos del reporte distintos a los del certificado",
+    "Corrección de un certificado no notificada a la autoridad",
+    "Certificado anulado sin registrar el motivo ni el certificado que lo sustituye",
+    "Certificado o copia extraviados en el archivo",
+    "El propietario no recibe el certificado o la placa"]},
+  { id: "H", name: "Viajes e importación", note: "Responda solo si la clínica emite certificados para viajes.", items: [
+    "Microchip implantado después de la vacuna antirrábica",
+    "No se respeta el periodo de espera tras la vacunación antes del viaje",
+    "Formulario equivocado para el país de destino o de retorno",
+    "Falta el endoso o la legalización oficial requerida",
+    "Datos del certificado de viaje distintos a los del certificado antirrábico"]}
+];
+document.getElementById("nojs").hidden = true;
+const FREQ = ["Nunca", "Rara vez", "A veces", "Frecuente", "No sé"];
+const PRIO = ["Alta", "Media", "Baja", "No incluir"];
+const TOTAL = CATS.reduce((n, c) => n + c.items.length, 0);
+const DRAFT_KEY = "encuesta-errores-rabia-borrador";
+
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+const seg = (name, opts, cls) => `<div class="seg ${cls || ""}">${opts.map((o, i) =>
+  `<input type="radio" name="${name}" id="${name}-${i}" value="${esc(o)}"><label for="${name}-${i}">${esc(o)}</label>`).join("")}</div>`;
+const scales = key => `<div class="scales">
+  <div class="scale"><span class="scale-name">Frecuencia</span>${seg(key + "-f", FREQ)}</div>
+  <div class="scale"><span class="scale-name">Prioridad</span>${seg(key + "-p", PRIO, "prio-alta")}</div></div>`;
+
+function render() {
+  let html = "";
+  for (const c of CATS) {
+    html += `<section class="cat" data-cat="${c.id}"><header><h2>${c.id}. ${esc(c.name)}</h2><span class="count" id="count-${c.id}">0 / ${c.items.length}</span></header>`;
+    if (c.note) html += `<p class="note">${esc(c.note)}</p>`;
+    c.items.forEach((t, i) => {
+      const key = c.id + (i + 1);
+      html += `<div class="item" id="item-${key}" data-key="${key}"><div class="code">${key}</div><div class="body">
+        <div class="text">${esc(t)}</div>${scales(key)}
+        <textarea id="${key}-o" rows="1" placeholder="Observaciones o un ejemplo (opcional)" aria-label="Observaciones ${key}"></textarea></div></div>`;
+    });
+    html += `</section>`;
+  }
+  html += `<section class="cat otros"><header><h2>Otros errores</h2><span class="count">Opcional</span></header>
+    <p class="note">Describa errores que no estén en la lista.</p>`;
+  for (let i = 1; i <= 3; i++) {
+    const key = "X" + i;
+    html += `<div class="item" data-key="${key}"><div class="code">${key}</div><div class="body">
+      <input type="text" id="${key}-e" placeholder="Describa el error" aria-label="Error ${key}">${scales(key)}
+      <textarea id="${key}-o" rows="1" placeholder="Observaciones (opcional)" aria-label="Observaciones ${key}"></textarea></div></div>`;
+  }
+  html += `</section>`;
+  document.getElementById("form").innerHTML = html;
+}
+
+const radioVal = name => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ""; };
+const setRadio = (name, v) => { if (!v) return; const el = [...document.querySelectorAll(`input[name="${name}"]`)].find(x => x.value === v); if (el) el.checked = true; };
+const val = id => (document.getElementById(id)?.value || "").trim();
+
+function collect() {
+  const items = {};
+  for (const c of CATS) c.items.forEach((t, i) => {
+    const k = c.id + (i + 1);
+    items[k] = { error: t, frecuencia: radioVal(k + "-f"), prioridad: radioVal(k + "-p"), observaciones: val(k + "-o") };
+  });
+  const otros = [1, 2, 3].map(i => ({ codigo: "X" + i, error: val("X" + i + "-e"), frecuencia: radioVal("X" + i + "-f"), prioridad: radioVal("X" + i + "-p"), observaciones: val("X" + i + "-o") }))
+    .filter(o => o.error || o.frecuencia || o.prioridad || o.observaciones);
+  return { fecha: val("fecha"), items, otros };
+}
+
+function apply(d) {
+  if (!d) return;
+  for (const f of ["fecha"]) if (d[f]) document.getElementById(f).value = d[f];
+  for (const [k, v] of Object.entries(d.items || {})) {
+    setRadio(k + "-f", v.frecuencia); setRadio(k + "-p", v.prioridad);
+    const o = document.getElementById(k + "-o"); if (o && v.observaciones) o.value = v.observaciones;
+  }
+  for (const o of d.otros || []) {
+    const k = o.codigo; if (!document.getElementById(k + "-e")) continue;
+    document.getElementById(k + "-e").value = o.error || "";
+    setRadio(k + "-f", o.frecuencia); setRadio(k + "-p", o.prioridad);
+    document.getElementById(k + "-o").value = o.observaciones || "";
+  }
+  progress();
+}
+
+function progress() {
+  let done = 0;
+  for (const c of CATS) {
+    let n = 0;
+    c.items.forEach((t, i) => {
+      const k = c.id + (i + 1);
+      const ok = radioVal(k + "-f") && radioVal(k + "-p");
+      document.getElementById("item-" + k).classList.toggle("done", !!ok);
+      if (ok) n++;
+    });
+    document.getElementById("count-" + c.id).textContent = `${n} / ${c.items.length}`;
+    done += n;
+  }
+  document.getElementById("fill").style.width = (done / TOTAL * 100) + "%";
+  document.getElementById("ptext").textContent = `${done} de ${TOTAL} errores respondidos (frecuencia y prioridad)`;
+}
+
+const statusEl = document.getElementById("status");
+const setStatus = (msg, cls) => { statusEl.textContent = msg; statusEl.className = "status " + (cls || ""); };
+const saveDraft = () => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(collect())); } catch (e) {} };
+
+render();
+document.getElementById("fecha").value = new Date().toISOString().slice(0, 10);
+try { const d = localStorage.getItem(DRAFT_KEY); if (d) apply(JSON.parse(d)); } catch (e) {}
+progress();
+
+let dirty = false;
+document.addEventListener("change", () => { progress(); saveDraft(); dirty = true; setStatus("Guardado en este navegador"); });
+document.addEventListener("input", e => { if (e.target.matches("textarea, input[type=text]")) { saveDraft(); dirty = true; setStatus("Guardado en este navegador"); } });
+
+const banner = document.getElementById("banner");
+function showBanner(msg) { banner.textContent = msg; banner.hidden = false; }
+
+const csvCell = v => { const t = String(v ?? ""); return /[";\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+function toCSV(d) {
+  const rows = [["Fecha", d.fecha], [],
+    ["Codigo", "Categoria", "Error", "Frecuencia", "Prioridad", "Observaciones"]];
+  for (const c of CATS) c.items.forEach((t, i) => {
+    const k = c.id + (i + 1), v = d.items[k];
+    rows.push([k, c.name, t, v.frecuencia, v.prioridad, v.observaciones]);
+  });
+  for (const o of d.otros) rows.push([o.codigo, "Otros", o.error, o.frecuencia, o.prioridad, o.observaciones]);
+  return "\ufeff" + rows.map(r => r.map(csvCell).join(";")).join("\r\n");
+}
+function toText(d) {
+  const lines = [`Fecha: ${d.fecha}`, ""];
+  for (const c of CATS) c.items.forEach((t, i) => {
+    const k = c.id + (i + 1), v = d.items[k];
+    if (v.frecuencia || v.prioridad || v.observaciones) lines.push(`${k} | ${v.frecuencia || "-"} | ${v.prioridad || "-"}${v.observaciones ? " | " + v.observaciones : ""}`);
+  });
+  for (const o of d.otros) lines.push(`${o.codigo} ${o.error} | ${o.frecuencia || "-"} | ${o.prioridad || "-"}${o.observaciones ? " | " + o.observaciones : ""}`);
+  return lines.join("\n");
+}
+
+document.getElementById("save").addEventListener("click", () => {
+  const d = collect();
+  banner.hidden = true;
+  const blob = new Blob([toCSV(d)], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `respuestas-errores-rabia-${d.fecha || "sin-fecha"}-${new Date().toTimeString().slice(0, 5).replace(":", "")}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  setStatus("Archivo descargado. Envíelo por correo o WhatsApp.", "ok");
+});
+
+document.getElementById("wa").addEventListener("click", e => {
+  const text = "Respuestas: errores en certificados antirrábicos\n" + toText(collect());
+  e.currentTarget.href = "https://wa.me/?text=" + encodeURIComponent(text);
+  setStatus("Abriendo WhatsApp…", "ok");
+});
+
+document.getElementById("copy").addEventListener("click", async () => {
+  const d = collect();
+  banner.hidden = true;
+  const text = toText(d);
+  try { await navigator.clipboard.writeText(text); setStatus("Respuestas copiadas. Péguelas en un correo o mensaje.", "ok"); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); setStatus("Respuestas copiadas. Péguelas en un correo o mensaje.", "ok"); }
+    catch (e2) { setStatus("No se pudo copiar. Use «Descargar respuestas».", "err"); }
+    ta.remove();
+  }
+});
+
+// Step-by-step navigation: one category per screen. Without scripts the page stays a single long list.
+const STEP_KEY = "encuesta-errores-rabia-paso";
+const steps = [document.getElementById("step-start"), ...document.querySelectorAll("#form > section"), document.getElementById("step-end")];
+const stepNames = ["Inicio", ...CATS.map(c => `${c.id}. ${c.name}`), "Otros errores", "Terminar"];
+const prevBtn = document.getElementById("prev"), nextBtn = document.getElementById("next"), stepLabel = document.getElementById("steplabel");
+steps.forEach(st => st.classList.add("stepped"));
+document.documentElement.classList.add("js");
+let cur = 0;
+
+function renderEnd() {
+  let done = 0;
+  const rows = CATS.map((c, ci) => {
+    const n = c.items.filter((t, i) => radioVal(c.id + (i + 1) + "-f") && radioVal(c.id + (i + 1) + "-p")).length;
+    done += n;
+    return `<button type="button" class="end-row${n === c.items.length ? " full" : ""}" data-go="${ci + 1}"><span>${c.id}. ${esc(c.name)}</span><span class="n">${n} de ${c.items.length}</span></button>`;
+  });
+  const otros = collect().otros.filter(o => o.error).length;
+  rows.push(`<button type="button" class="end-row" data-go="${CATS.length + 1}"><span>Otros errores</span><span class="n">${otros ? otros + " añadido" + (otros > 1 ? "s" : "") : "Ninguno"}</span></button>`);
+  document.getElementById("end-list").innerHTML = rows.join("");
+  document.getElementById("end-summary").textContent = done === TOTAL
+    ? `Ha respondido los ${TOTAL} errores. Ya puede enviar sus respuestas.`
+    : `Ha respondido ${done} de ${TOTAL} errores. Toque una categoría para completar las que faltan, o envíe sus respuestas tal como están.`;
+}
+
+function go(i) {
+  cur = Math.max(0, Math.min(steps.length - 1, i));
+  steps.forEach((st, j) => st.classList.toggle("active", j === cur));
+  const last = steps.length - 1;
+  prevBtn.hidden = cur === 0;
+  nextBtn.hidden = cur === last;
+  nextBtn.textContent = cur === 0 ? "Comenzar →" : cur === last - 1 ? "Terminar →" : "Siguiente →";
+  stepLabel.textContent = `Paso ${cur + 1} de ${steps.length} · ${stepNames[cur]}`;
+  if (cur === last) renderEnd();
+  window.scrollTo(0, 0);
+  try { localStorage.setItem(STEP_KEY, String(cur)); } catch (e) {}
+}
+
+prevBtn.addEventListener("click", () => go(cur - 1));
+nextBtn.addEventListener("click", () => go(cur + 1));
+document.getElementById("start").addEventListener("click", e => { e.preventDefault(); go(1); });
+document.getElementById("end-list").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(Number(b.dataset.go)); });
+
+let saved = 0;
+try { saved = Number(localStorage.getItem(STEP_KEY)) || 0; } catch (e) {}
+go(saved);
+</script>
+</body>
+</html>
