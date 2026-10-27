@@ -41,6 +41,9 @@ h2 { font-size: 1.25rem; }
 .intro { display: grid; gap: 12px; }
 .intro p { margin: 0; max-width: 65ch; color: var(--muted); }
 .reviewed { font-size: 13px; color: var(--muted); }
+.legal { font-size: 13px; line-height: 1.5; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; max-width: 65ch; }
+.legal b { color: var(--ink); }
+.legal-short { margin: 0; font-size: 13px; color: var(--muted); max-width: 65ch; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -99,7 +102,10 @@ button.save:disabled { opacity: .55; cursor: default; }
 .end-row .n { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; font-size: 13px; }
 .end-row.full .n { color: var(--ok); font-weight: 600; }
 .end-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-a.save { display: inline-block; text-decoration: none; text-align: center; }
+a.save { display: inline-block; text-decoration: none; text-align: center; font-weight: 600; border-radius: 8px; padding: 10px 18px; }
+a.save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.end-actions > * { flex: 1 1 auto; }
+@media (max-width: 620px) { .end-actions > * { flex: 1 1 100%; } }
 a.save.wa { background: var(--accent); color: var(--surface); }
 @media (max-width: 620px) {
   .bar { padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
@@ -121,6 +127,7 @@ a.save.wa { background: var(--accent); color: var(--surface); }
     <p>Esta lista reúne 63 errores posibles. Para cada uno, marque con qué frecuencia ocurre y qué prioridad debe tener en el sistema. Sus respuestas decidirán qué controles se implementan primero. Le tomará unos 15 minutos. Sus respuestas se guardan solas en este navegador, así que puede cerrar y seguir más tarde en el mismo equipo.</p>
     <p><b>Al terminar:</b> en la última pantalla pulse «Enviar por WhatsApp» para mandar sus respuestas a la persona que le pidió completar el formulario.</p>
     <p>No escriba datos personales de propietarios ni de pacientes en las observaciones.</p>
+    <div class="legal" role="note"><b>Aviso de confidencialidad.</b> La información recogida en este formulario es de uso exclusivo de Vet Care University. Se utilizará únicamente para diseñar e implementar el sistema de control de calidad de los certificados de vacunación antirrábica. Queda prohibida su reproducción, distribución o uso por terceros sin autorización expresa de Vet Care University. El formulario no solicita datos personales de quien responde.</div>
     <div class="reviewed">Reviewed by: Prof. Luis Orlando Maroto Martín, DVM, PhD</div>
   </div>
 
@@ -148,6 +155,7 @@ a.save.wa { background: var(--accent); color: var(--surface); }
     <h2>Revise y envíe sus respuestas</h2>
     <p id="end-summary" class="end-summary"></p>
     <div id="end-list" class="end-list"></div>
+    <p class="legal-short">Al enviar sus respuestas, usted reconoce que su contenido es información confidencial de uso exclusivo de Vet Care University.</p>
     <div class="end-actions">
       <a class="save wa" id="wa" href="https://wa.me/" target="_blank" rel="noopener">Enviar por WhatsApp</a>
       <button class="save alt" id="copy" type="button">Copiar respuestas</button>
@@ -348,7 +356,7 @@ function showBanner(msg) { banner.textContent = msg; banner.hidden = false; }
 
 const csvCell = v => { const t = String(v ?? ""); return /[";\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
 function toCSV(d) {
-  const rows = [["Fecha", d.fecha], [],
+  const rows = [["Fecha", d.fecha], ["Información confidencial. Uso exclusivo de Vet Care University."], [],
     ["Codigo", "Categoria", "Error", "Frecuencia", "Prioridad", "Observaciones"]];
   for (const c of CATS) c.items.forEach((t, i) => {
     const k = c.id + (i + 1), v = d.items[k];
@@ -358,7 +366,7 @@ function toCSV(d) {
   return "\ufeff" + rows.map(r => r.map(csvCell).join(";")).join("\r\n");
 }
 function toText(d) {
-  const lines = [`Fecha: ${d.fecha}`, ""];
+  const lines = [`Fecha: ${d.fecha}`, "Información confidencial. Uso exclusivo de Vet Care University.", ""];
   for (const c of CATS) c.items.forEach((t, i) => {
     const k = c.id + (i + 1), v = d.items[k];
     if (v.frecuencia || v.prioridad || v.observaciones) lines.push(`${k} | ${v.frecuencia || "-"} | ${v.prioridad || "-"}${v.observaciones ? " | " + v.observaciones : ""}`);
