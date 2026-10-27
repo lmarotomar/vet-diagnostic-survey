@@ -366,13 +366,35 @@ function toCSV(d) {
   return "\ufeff" + rows.map(r => r.map(csvCell).join(";")).join("\r\n");
 }
 function toText(d) {
-  const lines = [`Fecha: ${d.fecha}`, "Información confidencial. Uso exclusivo de Vet Care University.", ""];
-  for (const c of CATS) c.items.forEach((t, i) => {
-    const k = c.id + (i + 1), v = d.items[k];
-    if (v.frecuencia || v.prioridad || v.observaciones) lines.push(`${k} | ${v.frecuencia || "-"} | ${v.prioridad || "-"}${v.observaciones ? " | " + v.observaciones : ""}`);
+  let done = 0, alta = 0;
+  const blocks = [];
+  for (const c of CATS) {
+    const lines = [];
+    c.items.forEach((t, i) => {
+      const k = c.id + (i + 1), v = d.items[k];
+      if (v.frecuencia && v.prioridad) done++;
+      if (v.prioridad === "Alta") alta++;
+      if (v.frecuencia || v.prioridad || v.observaciones) {
+        lines.push(`${k} ${t}: ${v.frecuencia || "—"} · ${v.prioridad || "—"}`);
+        if (v.observaciones) lines.push(`   Obs.: ${v.observaciones}`);
+      }
+    });
+    if (lines.length) blocks.push(`*${c.id}. ${c.name}*\n` + lines.join("\n"));
+  }
+  const otros = d.otros.map(o => {
+    if (o.prioridad === "Alta") alta++;
+    return `${o.codigo} ${o.error || "(sin descripción)"}: ${o.frecuencia || "—"} · ${o.prioridad || "—"}` + (o.observaciones ? `\n   Obs.: ${o.observaciones}` : "");
   });
-  for (const o of d.otros) lines.push(`${o.codigo} ${o.error} | ${o.frecuencia || "-"} | ${o.prioridad || "-"}${o.observaciones ? " | " + o.observaciones : ""}`);
-  return lines.join("\n");
+  if (otros.length) blocks.push("*Otros errores*\n" + otros.join("\n"));
+  return [
+    "*Respuestas: errores en certificados antirrábicos*",
+    `Fecha: ${d.fecha}`,
+    "_Información confidencial. Uso exclusivo de Vet Care University._",
+    "",
+    `Respondidos: ${done} de ${TOTAL} · Prioridad alta: ${alta}`,
+    "",
+    blocks.length ? blocks.join("\n\n") : "(Sin respuestas)"
+  ].join("\n");
 }
 
 document.getElementById("save").addEventListener("click", () => {
@@ -388,7 +410,7 @@ document.getElementById("save").addEventListener("click", () => {
 });
 
 document.getElementById("wa").addEventListener("click", e => {
-  const text = "Respuestas: errores en certificados antirrábicos\n" + toText(collect());
+  const text = toText(collect());
   e.currentTarget.href = "https://wa.me/?text=" + encodeURIComponent(text);
   setStatus("Abriendo WhatsApp…", "ok");
 });
